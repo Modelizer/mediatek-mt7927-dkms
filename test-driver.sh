@@ -321,7 +321,94 @@ check_bt_rfkill() {
 }
 
 # ---------------------------------------------------------------------------
-# 12. Interface detection (auto via sysfs)
+# 12. Bluetooth runtime PM state (USB autosuspend policy)
+# ---------------------------------------------------------------------------
+check_bt_runtime_pm() {
+	local matches=0
+	local bad=0
+	local details=()
+	local ids=(
+		"0489:e13a" "0489:e0fa" "0489:e10f" "0489:e110" "0489:e116" "13d3:3588" "0e8d:6639"
+		"046d:c547" "046d:c548"
+	)
+
+	for devdir in /sys/bus/usb/devices/*; do
+		[[ -d "$devdir" ]] || continue
+		[[ -r "$devdir/idVendor" && -r "$devdir/idProduct" ]] || continue
+
+		local id
+		id="$(tr '[:upper:]' '[:lower:]' < "$devdir/idVendor"):$(tr '[:upper:]' '[:lower:]' < "$devdir/idProduct")"
+
+		local tracked=false
+		for candidate in "${ids[@]}"; do
+			if [[ "$id" == "$candidate" ]]; then
+				tracked=true
+				break
+			fi
+		done
+		$tracked || continue
+
+		matches=$((matches + 1))
+		local control="?"
+		local runtime="?"
+		[[ -r "$devdir/power/control" ]] && control="$(<"$devdir/power/control")"
+		[[ -r "$devdir/power/runtime_status" ]] && runtime="$(<"$devdir/power/runtime_status")"
+		details+=("${id}:${control}/${runtime}")
+
+		if [[ "$control" != "on" ]]; then
+			bad=$((bad + 1))
+		fi
+	done
+
+	if ((matches == 0)); then
+		na "no tracked MT6639/Logitech USB devices"
+		return
+	fi
+
+	local summary
+	summary="$(join_parts "${details[@]}")"
+	if ((bad > 0)); then
+		fail "${bad}/${matches} device(s) still autosuspend-enabled (${summary})"
+	else
+		ok "${matches} device(s) policy=on (${summary})"
+	fi
+}
+
+# ---------------------------------------------------------------------------
+# 13. Bluetooth HCI readiness after module reload
+# ---------------------------------------------------------------------------
+check_bt_hci_health() {
+	shopt -s nullglob
+	local hcis=(/sys/class/bluetooth/hci*)
+	shopt -u nullglob
+
+	if ((${#hcis[@]} == 0)); then
+		fail "no HCI controller after btusb reload"
+		return
+	fi
+
+	local names=()
+	for hci_path in "${hcis[@]}"; do
+		names+=("$(basename "$hci_path")")
+	done
+
+	local joined
+	joined="$(join_parts "${names[@]}")"
+
+	local dmesg_out=""
+	dmesg_out="$(dmesg 2>/dev/null | grep -iE 'Bluetooth: hci[0-9]+: command tx timeout|Bluetooth: hci[0-9]+: Failed|btusb.*error|btmtk.*error' || true)"
+	if [[ -n "$dmesg_out" ]]; then
+		local last_err
+		last_err="$(echo "$dmesg_out" | tail -1)"
+		fail "${joined} present but errors detected (${last_err})"
+		return
+	fi
+
+	ok "${joined} present"
+}
+
+# ---------------------------------------------------------------------------
+# 14. Interface detection (auto via sysfs)
 # ---------------------------------------------------------------------------
 detect_interface() {
 	local iface=""
@@ -353,7 +440,7 @@ detect_interface() {
 }
 
 # ---------------------------------------------------------------------------
-# 13. EHT / 320MHz / MLO capability
+# 15. EHT / 320MHz / MLO capability
 # ---------------------------------------------------------------------------
 check_eht_caps() {
 	local iface="$1"
@@ -413,7 +500,7 @@ check_eht_caps() {
 }
 
 # ---------------------------------------------------------------------------
-# 14. Device readiness (nmcli)
+# 16. Device readiness (nmcli)
 # ---------------------------------------------------------------------------
 check_device_ready() {
 	local iface="$1"
@@ -456,7 +543,7 @@ check_device_ready() {
 }
 
 # ---------------------------------------------------------------------------
-# 15. Regulatory / 6GHz NO_IR status
+# 17. Regulatory / 6GHz NO_IR status
 # ---------------------------------------------------------------------------
 check_regulatory() {
 	local iface="$1"
@@ -510,7 +597,7 @@ check_regulatory() {
 }
 
 # ---------------------------------------------------------------------------
-# 16. WiFi scan - report available bands
+# 18. WiFi scan - report available bands
 # ---------------------------------------------------------------------------
 check_scan() {
 	local iface="$1"
@@ -552,7 +639,7 @@ check_scan() {
 }
 
 # ---------------------------------------------------------------------------
-# 17. Connection status
+# 19. Connection status
 # ---------------------------------------------------------------------------
 check_connection() {
 	local iface="$1"
@@ -610,7 +697,7 @@ check_connection() {
 }
 
 # ---------------------------------------------------------------------------
-# 18. Quick data path test (3 pings to gateway)
+# 20. Quick data path test (3 pings to gateway)
 # ---------------------------------------------------------------------------
 check_data_path() {
 	local iface="$1"
@@ -665,7 +752,7 @@ check_data_path() {
 }
 
 # ---------------------------------------------------------------------------
-# 19. Error pattern check in dmesg
+# 21. Error pattern check in dmesg
 # ---------------------------------------------------------------------------
 check_errors() {
 	local dmesg_out=""
@@ -803,7 +890,7 @@ main() {
 
 	local pkg_ver kernel_ver pci_id
 	local modules dkms_status mod_source firmware aspm_status
-	local bt_usb bt_firmware bt_rfkill
+	local bt_usb bt_firmware bt_rfkill bt_runtime_pm bt_hci_health
 	local eht_caps device_ready regulatory
 	local scan_result conn_result data_result errors_result
 
@@ -825,6 +912,8 @@ main() {
 	bt_usb="$(check_bt_usb)"
 	bt_firmware="$(check_bt_firmware)"
 	bt_rfkill="$(check_bt_rfkill)"
+	bt_runtime_pm="$(check_bt_runtime_pm)"
+	bt_hci_health="$(check_bt_hci_health)"
 
 	echo "  WiFi capabilities..."
 	eht_caps="$(check_eht_caps "$iface")"
@@ -857,6 +946,8 @@ main() {
 - BT USB: ${bt_usb}
 - BT firmware: ${bt_firmware}
 - BT rfkill: ${bt_rfkill}
+- BT runtime PM: ${bt_runtime_pm}
+- BT HCI health: ${bt_hci_health}
 - Interface: ${iface:-not found}
 - EHT caps: ${eht_caps}
 - Device ready: ${device_ready}

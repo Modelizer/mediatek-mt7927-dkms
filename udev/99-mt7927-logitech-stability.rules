@@ -1,0 +1,16 @@
+# MT7927/MT6639 Bluetooth stability policy:
+# Keep affected USB devices out of runtime autosuspend to reduce reconnect
+# churn and input burst/unresponsive behavior on some systems.
+
+# MT6639 Bluetooth USB IDs used by MT7927 platforms
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e13a", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e0fa", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e10f", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e110", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=="e116", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="13d3", ATTR{idProduct}=="3588", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0e8d", ATTR{idProduct}=="6639", TEST=="power/control", ATTR{power/control}="on"
+
+# Logitech receivers commonly used with MX family (Unifying/Bolt)
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c547", TEST=="power/control", ATTR{power/control}="on"
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c548", TEST=="power/control", ATTR{power/control}="on"

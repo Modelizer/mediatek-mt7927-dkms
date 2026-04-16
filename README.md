@@ -203,11 +203,65 @@ USB device to vanish from `lsusb`. This persists across reboots and affects all 
 Fix: shut down completely, unplug the PSU cable (or switch off at the back), wait at
 least 10 seconds, then power back on. A CMOS reset also works but is more disruptive.
 
+**Logitech MX Keys Mini / MX Master 3S instability (disconnects, lag, burst input):**
+
+This branch ships a udev power policy that sets `power/control=on` (disables runtime
+autosuspend) for MT6639 Bluetooth USB IDs and common Logitech receiver IDs
+(`046d:c547`, `046d:c548`). This reduces frequent reconnects and input stalls on
+affected systems.
+
+After install, the package applies this automatically from:
+
+```text
+/usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh
+```
+
+Verify current runtime PM state:
+
+```bash
+for d in /sys/bus/usb/devices/*; do
+  [ -r "$d/idVendor" ] && [ -r "$d/idProduct" ] || continue
+  id="$(cat "$d/idVendor" | tr '[:upper:]' '[:lower:]'):$(cat "$d/idProduct" | tr '[:upper:]' '[:lower:]')"
+  case "$id" in
+    0489:e13a|0489:e0fa|0489:e10f|0489:e110|0489:e116|13d3:3588|0e8d:6639|046d:c547|046d:c548)
+      printf "%s power/control=%s runtime_status=%s\n" \
+        "$id" "$(cat "$d/power/control" 2>/dev/null)" "$(cat "$d/power/runtime_status" 2>/dev/null)"
+      ;;
+  esac
+done
+```
+
+Expected: `power/control=on` for matched devices.
+
+Rollback:
+
+```bash
+sudo rm -f /usr/lib/udev/rules.d/99-mt7927-logitech-stability.rules
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=usb --action=change
+# or remove package entirely
+sudo dpkg -P mediatek-mt7927-dkms
+```
+
 **DKMS not built for current kernel:**
 
 ```bash
 sudo dkms install mediatek-mt7927/2.11
 ```
+
+### Logitech soak test (keyboard + mouse)
+
+After installing the package:
+
+```bash
+sudo ./test-driver.sh
+```
+
+Then run a practical 1-2 hour work-session soak with periodic idle/resume cycles:
+- keep MX Keys Mini and MX Master 3S connected over Bluetooth
+- leave idle for 5-10 minutes, resume typing/mouse movement
+- suspend/resume once or twice
+- confirm no repeated reconnect prompts and no burst/stuck input behavior
 
 ## Upstream tracking
 
@@ -218,6 +272,20 @@ sudo dkms install mediatek-mt7927/2.11
 | BT firmware (linux-firmware) | MR open (mt7927/ path) | [#15](https://github.com/jetm/mediatek-mt7927-dkms/issues/15) |
 
 See [mt76#927](https://github.com/openwrt/mt76/issues/927) for the community tracking issue.
+
+## Stable branch sync workflow
+
+For this branch (`stable/logitech-bt`), keep upstream sync narrow and stability-oriented:
+
+```bash
+git checkout stable/logitech-bt
+git fetch origin --tags
+git log --oneline HEAD..origin/master
+# Cherry-pick only BT stability or packaging commits you want to absorb
+git cherry-pick <commit>
+```
+
+Avoid broad rebases when the goal is workstation stability and repeatable local `.deb` behavior.
 
 ## Roadmap
 

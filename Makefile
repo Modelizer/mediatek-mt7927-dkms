@@ -139,6 +139,11 @@ install: sources
 	install -m644 $(TOPDIR)mt6639-bt-[0-9]*.patch $(TOPDIR)mt6639-bt-compat-*.patch "$(DESTDIR)$(DKMS_PREFIX)/patches/bt/"
 	install -m644 "$(TOPDIR)mt7902-wifi-6.19.patch" "$(DESTDIR)$(DKMS_PREFIX)/patches/wifi/"
 	install -m644 $(TOPDIR)mt7927-wifi-*.patch "$(DESTDIR)$(DKMS_PREFIX)/patches/wifi/"
+	# Logitech stability policy (udev + helper)
+	install -Dm644 "$(TOPDIR)udev/99-mt7927-logitech-stability.rules" \
+		"$(DESTDIR)/usr/lib/udev/rules.d/99-mt7927-logitech-stability.rules"
+	install -Dm755 "$(TOPDIR)scripts/apply-logitech-stability.sh" \
+		"$(DESTDIR)/usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh"
 	@echo "==> Install complete."
 
 # ── rpm ─────────────────────────────────────────────────────────────

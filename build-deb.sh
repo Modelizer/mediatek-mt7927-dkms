@@ -52,9 +52,14 @@ set -e
 DKMS_NAME="mediatek-mt7927"
 DKMS_VERSION="@VERSION@"
 if [ "$1" = "configure" ]; then
-    dkms add -m "${DKMS_NAME}" -v "${DKMS_VERSION}" || true
+    if ! dkms status -m "${DKMS_NAME}" -v "${DKMS_VERSION}" >/dev/null 2>&1; then
+        dkms add -m "${DKMS_NAME}" -v "${DKMS_VERSION}" || true
+    fi
     dkms build -m "${DKMS_NAME}" -v "${DKMS_VERSION}" || true
     dkms install -m "${DKMS_NAME}" -v "${DKMS_VERSION}" --force || true
+    if [ -x /usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh ]; then
+        /usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh || true
+    fi
 fi
 EOF
 sed -i "s/@VERSION@/${VERSION}/" "${STAGEDIR}/DEBIAN/postinst"
@@ -67,6 +72,10 @@ DKMS_NAME="mediatek-mt7927"
 DKMS_VERSION="@VERSION@"
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
     dkms remove -m "${DKMS_NAME}" -v "${DKMS_VERSION}" --all || true
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules || true
+        udevadm trigger --subsystem-match=usb --action=change || true
+    fi
 fi
 EOF
 sed -i "s/@VERSION@/${VERSION}/" "${STAGEDIR}/DEBIAN/prerm"
