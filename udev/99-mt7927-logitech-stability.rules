@@ -11,6 +11,3 @@ ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0489", ATTR{idProduct}=
 ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="13d3", ATTR{idProduct}=="3588", TEST=="power/control", ATTR{power/control}="on"
 ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="0e8d", ATTR{idProduct}=="6639", TEST=="power/control", ATTR{power/control}="on"
 
-# Logitech receivers commonly used with MX family (Unifying/Bolt)
-ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c547", TEST=="power/control", ATTR{power/control}="on"
-ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="046d", ATTR{idProduct}=="c548", TEST=="power/control", ATTR{power/control}="on"

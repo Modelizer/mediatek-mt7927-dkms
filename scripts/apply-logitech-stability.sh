@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply MT7927 + Logitech USB runtime PM stability policy immediately.
+# Apply MT7927/MT6639 Bluetooth USB runtime PM stability policy immediately.
 
 set -euo pipefail
 
@@ -33,7 +33,7 @@ match_and_apply() {
 	product="$(tr '[:upper:]' '[:lower:]' < "${product_file}")"
 
 	case "${vendor}:${product}" in
-	0489:e13a|0489:e0fa|0489:e10f|0489:e110|0489:e116|13d3:3588|0e8d:6639|046d:c547|046d:c548)
+	0489:e13a|0489:e0fa|0489:e10f|0489:e110|0489:e116|13d3:3588|0e8d:6639)
 		set_control_on "${devdir}"
 		;;
 	esac
