@@ -60,6 +60,11 @@ if [ "$1" = "configure" ]; then
     if [ -x /usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh ]; then
         /usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh || true
     fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl daemon-reload || true
+        systemctl enable mt7927-bt-autoconnect.service || true
+        systemctl start mt7927-bt-autoconnect.service || true
+    fi
 fi
 EOF
 sed -i "s/@VERSION@/${VERSION}/" "${STAGEDIR}/DEBIAN/postinst"
@@ -71,6 +76,10 @@ set -e
 DKMS_NAME="mediatek-mt7927"
 DKMS_VERSION="@VERSION@"
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl disable --now mt7927-bt-autoconnect.service || true
+        systemctl daemon-reload || true
+    fi
     dkms remove -m "${DKMS_NAME}" -v "${DKMS_VERSION}" --all || true
     if command -v udevadm >/dev/null 2>&1; then
         udevadm control --reload-rules || true

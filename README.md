@@ -205,10 +205,13 @@ least 10 seconds, then power back on. A CMOS reset also works but is more disrup
 
 **Logitech MX Keys Mini / MX Master 3S instability (disconnects, lag, burst input):**
 
-This branch ships a udev power policy that sets `power/control=on` (disables runtime
-autosuspend) for MT6639 Bluetooth USB IDs and common Logitech receiver IDs
-(`046d:c547`, `046d:c548`). This reduces frequent reconnects and input stalls on
-affected systems.
+This branch ships Bluetooth-focused hardening for MT6639:
+- udev power policy sets `power/control=on` for MT6639 Bluetooth USB IDs
+- `btusb` module policy sets `enable_autosuspend=n`
+- resume hook runs a controlled BT stack recovery after suspend/resume
+- boot autoconnect service powers adapter and reconnects trusted Logitech BT input devices
+
+This targets reconnect corruption and HID/BLE burst-latency behavior on affected systems.
 
 After install, the package applies this automatically from:
 
@@ -223,7 +226,7 @@ for d in /sys/bus/usb/devices/*; do
   [ -r "$d/idVendor" ] && [ -r "$d/idProduct" ] || continue
   id="$(cat "$d/idVendor" | tr '[:upper:]' '[:lower:]'):$(cat "$d/idProduct" | tr '[:upper:]' '[:lower:]')"
   case "$id" in
-    0489:e13a|0489:e0fa|0489:e10f|0489:e110|0489:e116|13d3:3588|0e8d:6639|046d:c547|046d:c548)
+    0489:e13a|0489:e0fa|0489:e10f|0489:e110|0489:e116|13d3:3588|0e8d:6639)
       printf "%s power/control=%s runtime_status=%s\n" \
         "$id" "$(cat "$d/power/control" 2>/dev/null)" "$(cat "$d/power/runtime_status" 2>/dev/null)"
       ;;
@@ -232,6 +235,26 @@ done
 ```
 
 Expected: `power/control=on` for matched devices.
+
+Verify `btusb` autosuspend policy:
+
+```bash
+cat /sys/module/btusb/parameters/enable_autosuspend
+```
+
+Expected: `N` (or `0`).
+
+Verify boot autoconnect service:
+
+```bash
+systemctl status mt7927-bt-autoconnect.service --no-pager
+```
+
+Expected: `enabled` and successful start on boot.
+
+Important: for password entry at login, pair your MX keyboard/mouse over Bluetooth and
+mark them as trusted (`Trusted: yes`). The service reconnects only trusted Logitech
+Bluetooth input devices and ignores USB dongle paths.
 
 Rollback:
 

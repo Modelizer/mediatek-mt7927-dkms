@@ -329,7 +329,6 @@ check_bt_runtime_pm() {
 	local details=()
 	local ids=(
 		"0489:e13a" "0489:e0fa" "0489:e10f" "0489:e110" "0489:e116" "13d3:3588" "0e8d:6639"
-		"046d:c547" "046d:c548"
 	)
 
 	for devdir in /sys/bus/usb/devices/*; do
@@ -361,7 +360,7 @@ check_bt_runtime_pm() {
 	done
 
 	if ((matches == 0)); then
-		na "no tracked MT6639/Logitech USB devices"
+		na "no tracked MT6639 USB BT devices"
 		return
 	fi
 
@@ -375,7 +374,29 @@ check_bt_runtime_pm() {
 }
 
 # ---------------------------------------------------------------------------
-# 13. Bluetooth HCI readiness after module reload
+# 13. btusb module autosuspend parameter
+# ---------------------------------------------------------------------------
+check_btusb_param() {
+	local param="/sys/module/btusb/parameters/enable_autosuspend"
+	if [[ ! -r "$param" ]]; then
+		na "btusb param not exposed"
+		return
+	fi
+
+	local val
+	val="$(<"$param")"
+	case "$val" in
+	N|n|0)
+		ok "enable_autosuspend=${val}"
+		;;
+	*)
+		fail "enable_autosuspend=${val} (expected n/0)"
+		;;
+	esac
+}
+
+# ---------------------------------------------------------------------------
+# 14. Bluetooth HCI readiness after module reload
 # ---------------------------------------------------------------------------
 check_bt_hci_health() {
 	shopt -s nullglob
@@ -408,7 +429,7 @@ check_bt_hci_health() {
 }
 
 # ---------------------------------------------------------------------------
-# 14. Interface detection (auto via sysfs)
+# 15. Interface detection (auto via sysfs)
 # ---------------------------------------------------------------------------
 detect_interface() {
 	local iface=""
@@ -440,7 +461,7 @@ detect_interface() {
 }
 
 # ---------------------------------------------------------------------------
-# 15. EHT / 320MHz / MLO capability
+# 16. EHT / 320MHz / MLO capability
 # ---------------------------------------------------------------------------
 check_eht_caps() {
 	local iface="$1"
@@ -500,7 +521,7 @@ check_eht_caps() {
 }
 
 # ---------------------------------------------------------------------------
-# 16. Device readiness (nmcli)
+# 17. Device readiness (nmcli)
 # ---------------------------------------------------------------------------
 check_device_ready() {
 	local iface="$1"
@@ -543,7 +564,7 @@ check_device_ready() {
 }
 
 # ---------------------------------------------------------------------------
-# 17. Regulatory / 6GHz NO_IR status
+# 18. Regulatory / 6GHz NO_IR status
 # ---------------------------------------------------------------------------
 check_regulatory() {
 	local iface="$1"
@@ -597,7 +618,7 @@ check_regulatory() {
 }
 
 # ---------------------------------------------------------------------------
-# 18. WiFi scan - report available bands
+# 19. WiFi scan - report available bands
 # ---------------------------------------------------------------------------
 check_scan() {
 	local iface="$1"
@@ -639,7 +660,7 @@ check_scan() {
 }
 
 # ---------------------------------------------------------------------------
-# 19. Connection status
+# 20. Connection status
 # ---------------------------------------------------------------------------
 check_connection() {
 	local iface="$1"
@@ -697,7 +718,7 @@ check_connection() {
 }
 
 # ---------------------------------------------------------------------------
-# 20. Quick data path test (3 pings to gateway)
+# 21. Quick data path test (3 pings to gateway)
 # ---------------------------------------------------------------------------
 check_data_path() {
 	local iface="$1"
@@ -752,7 +773,7 @@ check_data_path() {
 }
 
 # ---------------------------------------------------------------------------
-# 21. Error pattern check in dmesg
+# 22. Error pattern check in dmesg
 # ---------------------------------------------------------------------------
 check_errors() {
 	local dmesg_out=""
@@ -890,7 +911,7 @@ main() {
 
 	local pkg_ver kernel_ver pci_id
 	local modules dkms_status mod_source firmware aspm_status
-	local bt_usb bt_firmware bt_rfkill bt_runtime_pm bt_hci_health
+	local bt_usb bt_firmware bt_rfkill bt_runtime_pm btusb_param bt_hci_health
 	local eht_caps device_ready regulatory
 	local scan_result conn_result data_result errors_result
 
@@ -913,6 +934,7 @@ main() {
 	bt_firmware="$(check_bt_firmware)"
 	bt_rfkill="$(check_bt_rfkill)"
 	bt_runtime_pm="$(check_bt_runtime_pm)"
+	btusb_param="$(check_btusb_param)"
 	bt_hci_health="$(check_bt_hci_health)"
 
 	echo "  WiFi capabilities..."
@@ -947,6 +969,7 @@ main() {
 - BT firmware: ${bt_firmware}
 - BT rfkill: ${bt_rfkill}
 - BT runtime PM: ${bt_runtime_pm}
+- btusb autosuspend param: ${btusb_param}
 - BT HCI health: ${bt_hci_health}
 - Interface: ${iface:-not found}
 - EHT caps: ${eht_caps}

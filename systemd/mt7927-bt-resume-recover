@@ -1,0 +1,10 @@
+#!/bin/sh
+# systemd-sleep hook: recover MT7927 Bluetooth stack after resume.
+
+case "$1" in
+post)
+	if [ -x /usr/lib/mediatek-mt7927-dkms/mt7927-bt-recover.sh ]; then
+		/usr/lib/mediatek-mt7927-dkms/mt7927-bt-recover.sh || true
+	fi
+	;;
+esac

@@ -1,0 +1,13 @@
+[Unit]
+Description=MT7927 Bluetooth autoconnect for Logitech input devices
+After=bluetooth.service
+Wants=bluetooth.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/mediatek-mt7927-dkms/mt7927-bt-autoconnect.sh
+TimeoutStartSec=45
+
+[Install]
+WantedBy=multi-user.target

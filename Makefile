@@ -142,8 +142,18 @@ install: sources
 	# Logitech stability policy (udev + helper)
 	install -Dm644 "$(TOPDIR)udev/99-mt7927-logitech-stability.rules" \
 		"$(DESTDIR)/usr/lib/udev/rules.d/99-mt7927-logitech-stability.rules"
+	install -Dm644 "$(TOPDIR)modprobe.d/mt7927-btusb-stability.conf" \
+		"$(DESTDIR)/usr/lib/modprobe.d/mt7927-btusb-stability.conf"
 	install -Dm755 "$(TOPDIR)scripts/apply-logitech-stability.sh" \
 		"$(DESTDIR)/usr/lib/mediatek-mt7927-dkms/apply-logitech-stability.sh"
+	install -Dm755 "$(TOPDIR)scripts/mt7927-bt-recover.sh" \
+		"$(DESTDIR)/usr/lib/mediatek-mt7927-dkms/mt7927-bt-recover.sh"
+	install -Dm755 "$(TOPDIR)scripts/mt7927-bt-autoconnect.sh" \
+		"$(DESTDIR)/usr/lib/mediatek-mt7927-dkms/mt7927-bt-autoconnect.sh"
+	install -Dm755 "$(TOPDIR)systemd/mt7927-bt-resume-recover" \
+		"$(DESTDIR)/usr/lib/systemd/system-sleep/mt7927-bt-resume-recover"
+	install -Dm644 "$(TOPDIR)systemd/mt7927-bt-autoconnect.service" \
+		"$(DESTDIR)/usr/lib/systemd/system/mt7927-bt-autoconnect.service"
 	@echo "==> Install complete."
 
 # ── rpm ─────────────────────────────────────────────────────────────

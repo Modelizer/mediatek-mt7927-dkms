@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply MT7927/MT6639 Bluetooth USB runtime PM stability policy immediately.
+# Apply MT7927/MT6639 Bluetooth runtime PM stability policy immediately.
 
 set -euo pipefail
 
@@ -18,6 +18,32 @@ set_control_on() {
 	local control_file="${devdir}/power/control"
 	if [ -w "${control_file}" ]; then
 		echo on > "${control_file}" || true
+	fi
+}
+
+reload_bt_if_needed() {
+	local param="/sys/module/btusb/parameters/enable_autosuspend"
+	local current=""
+	if [ -r "${param}" ]; then
+		current="$(<"${param}")"
+	fi
+
+	case "${current}" in
+	N|n|0)
+		return 0
+		;;
+	esac
+
+	log "Reloading btusb to apply enable_autosuspend=n"
+	modprobe -r btusb btmtk 2>/dev/null || true
+	sleep 1
+	modprobe btusb 2>/dev/null || true
+}
+
+restart_bluetoothd() {
+	if command -v systemctl >/dev/null 2>&1; then
+		log "Restarting bluetooth.service"
+		systemctl restart bluetooth || true
 	fi
 }
 
@@ -65,6 +91,9 @@ main() {
 		[ -d "${devdir}" ] || continue
 		match_and_apply "${devdir}"
 	done
+
+	reload_bt_if_needed
+	restart_bluetoothd
 }
 
 main "$@"
